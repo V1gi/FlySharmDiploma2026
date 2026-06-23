@@ -1,7 +1,7 @@
 {
   "name": "diploma2026",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "node index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
     "start": "ts-node src/server.ts"

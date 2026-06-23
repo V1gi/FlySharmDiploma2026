@@ -59,9 +59,6 @@ export default function DeliveriesPage({ role }: Props) {
   useEffect(() => {
     loadDeliveries();
     client.get('/orders').then(res => setOrders(res.data));
-    client.get('/clients').then(res => {
-      // загружаем сотрудников через отдельный запрос
-    });
   }, []);
 
   const openModal = async () => {
@@ -96,6 +93,15 @@ export default function DeliveriesPage({ role }: Props) {
     }
   };
 
+  const handleCourierStatusChange = async (deliveryId: number, status: string) => {
+    try {
+      await client.patch(`/deliveries/${deliveryId}/status`, { status });
+      loadDeliveries();
+    } catch {
+      setError('Ошибка при обновлении статуса');
+    }
+  };
+
   if (loading) return <div style={styles.loading}>Загрузка...</div>;
 
   return (
@@ -106,7 +112,7 @@ export default function DeliveriesPage({ role }: Props) {
           <span style={styles.count}>{deliveries.length} доставок</span>
         </div>
         {(role === 'admin' || role === 'manager') && (
-        <button style={styles.addBtn} onClick={openModal}>+ Назначить доставку</button>
+          <button style={styles.addBtn} onClick={openModal}>+ Назначить доставку</button>
         )}
       </div>
 
@@ -129,11 +135,42 @@ export default function DeliveriesPage({ role }: Props) {
               <span style={{ flex: 1, color: '#555' }}>
                 {d.order?.deliveryDate ? new Date(d.order.deliveryDate).toLocaleDateString('ru-RU') : '—'}
               </span>
-              <span style={{
-                flex: 1, fontWeight: 500, fontSize: 13,
-                color: STATUS_COLORS[d.deliveryStatus] || '#555',
-              }}>
-                {STATUS_LABELS[d.deliveryStatus] || d.deliveryStatus}
+              <span style={{ flex: 1, display: 'flex', gap: 6, alignItems: 'center' }}>
+                {role === 'courier' ? (
+                  <>
+                    <select
+                      style={{
+                        ...styles.stylesSelect,
+                        color: STATUS_COLORS[d.deliveryStatus] || '#555',
+                      }}
+                      value={d.deliveryStatus}
+                      onChange={e => handleCourierStatusChange(d.id, e.target.value)}
+                    >
+                      <option value="assigned">Назначена</option>
+                      <option value="in_progress">В пути</option>
+                      <option value="delivered">Доставлена</option>
+                      <option value="failed">Не доставлена</option>
+                    </select>
+                    {d.order?.deliveryAddress && (
+                      <a
+                        href={`https://yandex.ru/maps/?text=${encodeURIComponent(d.order.deliveryAddress)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={styles.mapBtn}
+                        title="Открыть на карте"
+                      >
+                        📍
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <span style={{
+                    fontWeight: 500, fontSize: 13,
+                    color: STATUS_COLORS[d.deliveryStatus] || '#555',
+                  }}>
+                    {STATUS_LABELS[d.deliveryStatus] || d.deliveryStatus}
+                  </span>
+                )}
               </span>
             </div>
           ))}
@@ -185,7 +222,6 @@ export default function DeliveriesPage({ role }: Props) {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: { padding: '32px 40px' },
   header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   title: { margin: 0, fontSize: 22, fontWeight: 700, color: '#111' },
   count: { fontSize: 14, color: '#888', backgroundColor: '#f0f0f0', padding: '3px 10px', borderRadius: 20 },
@@ -218,4 +254,20 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 15, fontWeight: 600, cursor: 'pointer',
   },
   error: { color: '#e53935', fontSize: 13, margin: 0 },
+  stylesSelect: {
+    border: '1px solid #eee', borderRadius: 6,
+    padding: '4px 8px', fontSize: 13,
+    fontWeight: 500, cursor: 'pointer',
+    backgroundColor: '#fafafa', outline: 'none', width: '100%',
+  },
+  mapBtn: {
+    textDecoration: 'none',
+    fontSize: 16,
+    padding: '4px 8px',
+    borderRadius: 6,
+    border: '1px solid #eee',
+    backgroundColor: '#fafafa',
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
 };
